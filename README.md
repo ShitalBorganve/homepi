@@ -15,7 +15,7 @@ control your room lighting and projector screen. The following components are in
     <pre>sudo apt-get install python-rpi.gpio python-webpy</pre>
   </li>
   <li>
-    <samp>web/PiLircControl.py</samp> - implements a lircd event listener just similar to irexec. With this program, you
+    <samp>web/PiLircControl.py</samp> - implements a lircd event listener similar to irexec. With this program, you
     can use remote controls or input devices supported by lirc to do the following:
     <ul>
       <li>control lights, and projector screen</li>
