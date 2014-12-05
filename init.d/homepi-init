@@ -1,0 +1,92 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          homepi-init
+# Required-Start:    $all
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:     0 1 6
+# Short-Description: 
+### END INIT INFO
+
+
+# for starting/stopping services for home automation
+
+# define environment variables
+LIRCD=/usr/sbin/lircd
+PYTHON=/usr/bin/python2
+HOMEPI_WEB_DIR=/home/xbmc/homepi/web
+HOMEPI_LIRC_DIR=/home/xbmc/homepi/lirc
+HOMEPI_WEB_PY=PiGpioWeb.py
+HOMEPI_LIRC_PY=PiLircControl.py
+HOMEPI_WEB_LOG=/var/log/PiGpioWeb.log
+HOMEPI_LIRC_LOG=/var/log/PiLircControl.log
+
+LIRCD_CONFIG=$HOMEPI_LIRC_DIR/lircd.conf
+LIRCD_DEVICE=/dev/usbuirt
+LIRCD_DRIVER=usb_uirt_raw
+LIRCD_SOCKET=/var/run/lirc/lircd
+
+. /lib/lsb/init-functions
+
+do_kill() {
+    pattern=$1
+    output=`ps aux|grep $1`
+    set -- $output
+    pid=$2
+    [ -z $pid ] || kill $pid >/dev/null 2>&1
+}
+
+do_start() {
+    log_daemon_msg "Starting home automation services:"
+
+    # start the web service for controlling rpi gpio
+    log_progress_msg "$HOMEPI_WEB_PY"
+    exec $PYTHON "$HOMEPI_WEB_DIR/$HOMEPI_WEB_PY" >$HOMEPI_WEB_LOG 2>&1 &
+    sleep 1
+
+    # start the lircd to control lights via remote
+    log_progress_msg "lircd"
+    mkdir -p "${LIRCD_SOCKET%/*}"
+    $LIRCD -H $LIRCD_DRIVER -d $LIRCD_DEVICE -l -o $LIRCD_SOCKET $LIRCD_CONFIG
+
+    # start lircd client to control the lights
+    log_progress_msg "$HOMEPI_LIRC_PY"
+    sleep 1
+    exec $PYTHON "$HOMEPI_LIRC_DIR/$HOMEPI_LIRC_PY" >$HOMEPI_LIRC_LOG 2>&1 &
+
+    log_end_msg 0
+}
+
+do_stop() {
+    log_daemon_msg "Stopping home automation services:"
+
+    log_progress_msg "$HOMEPI_LIRC_PY"
+    do_kill $HOMEPI_LIRC_PY
+
+    log_progress_msg "lircd"
+    do_kill lircd
+
+    log_progress_msg "$HOMEPI_WEB_PY"
+    do_kill $HOMEPI_WEB_PY
+
+    log_end_msg 0
+}
+
+case "$1" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    restart|reload)
+        do_stop
+        sleep 1
+        do_start
+        ;;
+    *)
+        echo "Usage: $0 star|stop" >&2
+        exit 3
+        ;;
+esac
