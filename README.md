@@ -23,7 +23,7 @@ control your room lighting and projector screen. The following components are in
           Send IR signals to control electronic devices such as tv/projector and a/v receiver.
           The lirc device must be capable of sending IR. I'm using <a href=http://www.usbuirt.com>USBUIRT</a>.
           Python code from <a href="https://bitbucket.org/charltones/python-lirc/src/77f4a9c67512/python-irsend.py">
-          charltones is used for sending IR.
+          charltones</a> is used for sending IR.
       </li>
       <li>Wake a media computer through wakeonlan facility</li>
       <li>Execute an external program or script</li>
