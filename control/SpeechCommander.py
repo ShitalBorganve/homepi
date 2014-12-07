@@ -31,10 +31,16 @@ class SpeechCommander:
 
         # process the matches
         self.matches = { }
+        wildcard_str = "[\w\s]*"
         for match in self.config.items("matches"):
-            self.matches[match[0]] = re.compile(match[1])
+            # convert the matches to regular expressions
+            re_list = match[1].split("|")
+            self.matches[match[0]] = []
+            for re_str in re_list:
+                reg_ex = wildcard_str + wildcard_str.join(re_str.split()) + wildcard_str
+                self.matches[match[0]].append(re.compile(reg_ex))
         
-        self.keywords = self.config.get("recognizer", "keywords").split(",")
+        self.keywords = self.config.get("recognizer", "keywords").split("|")
 
         # initialize command processor
         self.cmdProcessor = CommandProcessor.CommandProcessor(self.config)
@@ -43,6 +49,8 @@ class SpeechCommander:
         self.recognizer = sr.Recognizer()
         self.recognizer.energy_threshold = self.config.getint("recognizer", "energy_threshold")
         self.recognizer.pause_threshold = self.config.getfloat("recognizer", "pause_threshold")
+        self.command_duration = self.config.getint("recognizer", "command_duration")
+        self.force_command = self.config.getboolean("recognizer", "force_command")
 
     def __del__(self):
         self.pyaudio.terminate()
@@ -70,7 +78,7 @@ class SpeechCommander:
         keyword_mode = True
         with sr.Microphone(self.mic_device) as source:
             while True:
-                mode_str = "keyword" if keyword_mode else "command"
+                mode_str = "keyword" if keyword_mode and not self.force_command else "command"
                 logging.info("Listening for {0} from {1}...".format(mode_str, self.mic_device_name))
                 audio = self.recognizer.listen(source)
                 logging.info("Phrase captured.")
@@ -82,7 +90,7 @@ class SpeechCommander:
                         phrases.append(prediction["text"])
                     logging.info("Recognized phrases: " + str(phrases))
                     if len(phrases) > 0:
-                        if keyword_mode:        # looking for keyword
+                        if keyword_mode and not self.force_command:        # looking for keyword
                             for keyword in self.keywords:
                                 if keyword in phrases:
                                     logging.info("'{0}' keyword found.".format(keyword))
@@ -92,11 +100,13 @@ class SpeechCommander:
                         else:
                             # check and execute the command
                             command_ref = None
-                            for match_key in self.matches.keys():
-                                reg_ex = self.matches[match_key]
-                                for phrase in phrases:
-                                    if reg_ex.search(phrase):   # match is found
-                                        command_ref = match_key
+                            for phrase in phrases:
+                                for match_key in self.matches.keys():
+                                    for reg_ex in self.matches[match_key]:
+                                        if reg_ex.search(phrase):   # match is found
+                                            command_ref = match_key
+                                            break
+                                    if command_ref:
                                         break
                                 if command_ref:
                                     break
@@ -111,10 +121,11 @@ class SpeechCommander:
             
                 except LookupError:
                     logging.info("No recognize words")
-                
+
                 except:
                     e = sys.exc_info()[0]
                     traceback.print_exc()
+                    keyword_mode = True
 
 if __name__ == "__main__":
     import os
