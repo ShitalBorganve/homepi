@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# called from the udev rules
+
+HOMEPI_USER=xbmc
+HOMEPI_STT_DIR=/home/$HOMEPI_USER/homepi/control
+HOMEPI_STT_PY=SpeechCommander.py
+HOMEPI_STT_LOG=SpeechCommander.log
+PULSEAUDIO=/usr/bin/pulseaudio
+PACMD=/usr/bin/pacmd
+PYTHON=/usr/bin/python2
+
+do_kill() {
+    pattern=$1
+    output=`ps aux|grep $1`
+    set -- $output
+    pid=$2
+    [ -z $pid ] || kill $pid >/dev/null 2>&1
+}
+
+BLUETOOTH_MAC=00:00:00:00:02:B8
+NAME=${NAME//\"/}
+if [ "$NAME" = "$BLUETOOTH_MAC" ]; then
+    echo "Processing bluetooth device: |$ACTION|$NAME|" > /var/log/bluetooth_dev
+    if [ $ACTION = "add" ]; then
+        sleep 1
+        # start pulseaudio
+        sudo -u $HOMEPI_USER $PULSEAUDIO --daemonize >> /var/log/bluetooth_dev
+        bluez_mac=${NAME//:/_}
+        bluez_dev=bluez_source.${bluez_mac}
+        echo "$bluez_dev found." >> /var/log/bluetooth_dev
+
+        sleep 1
+        sudo -u $HOMEPI_USER $PACMD set-sink-volume bluez_sink.${bluez_mac} 0
+        sudo -u $HOMEPI_USER $PACMD set-default-source $bluez_dev >> /var/log/bluetooth_dev
+
+        # start the voice commander
+        sleep 2
+        nohup su - -c "$PYTHON $HOMEPI_STT_DIR/$HOMEPI_STT_PY" $HOMEPI_USER >/var/log/$HOMEPI_STT_LOG 2>&1 &
+
+    elif [ $ACTION = "remove" ]; then
+        # terminate the voice commander
+        do_kill $HOMEPI_STT_PY
+
+        # unload pulseaudio
+        sudo -u $HOMEPI_USER $PACMD exit >> /var/log/bluetooth_dev
+    fi
+fi
