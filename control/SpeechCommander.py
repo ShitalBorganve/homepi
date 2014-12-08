@@ -10,7 +10,7 @@ import pyaudio, wave
 import logging
 import re
 import CommandProcessor
-import sys, traceback
+import sys, traceback, time
 
 class SpeechCommander:
     
@@ -20,14 +20,10 @@ class SpeechCommander:
         
         # determine the device index to use for mic
         self.pyaudio = pyaudio.PyAudio()
-        p = self.pyaudio
         self.mic_device_name = self.config.get("recognizer", "mic_device")
-        self.mic_device = None
-        for i in range(p.get_device_count()):
-            device_name = p.get_device_info_by_index(i)["name"]
-            if device_name == self.mic_device_name:
-                self.mic_device = i
-                break
+        self.out_device_name = self.config.get("recognizer", "out_device")
+        self.mic_device = self._get_device_index(self.mic_device_name)
+        self.out_device = self._get_device_index(self.out_device_name)
 
         # process the matches
         self.matches = { }
@@ -55,6 +51,17 @@ class SpeechCommander:
     def __del__(self):
         self.pyaudio.terminate()
 
+    def _get_device_index(self, name):
+        ''' returns the index for the specified name '''
+        p = self.pyaudio
+        result = -1
+        for idx in range(p.get_device_count()):
+            if p.get_device_info_by_index(idx) == name:
+                result = idx
+                break
+                
+        return result
+        
     def playSound(self, waveFile):
         chunk = 1024
         p = self.pyaudio
@@ -63,6 +70,7 @@ class SpeechCommander:
         stream = p.open(format = p.get_format_from_width(wf.getsampwidth()),
                         channels = wf.getnchannels(),
                         rate = wf.getframerate(),
+                        output_device_index = self.out_device,
                         output = True)
         
         data = wf.readframes(chunk)
@@ -76,56 +84,59 @@ class SpeechCommander:
 
     def listen(self):
         keyword_mode = True
-        with sr.Microphone(self.mic_device) as source:
-            while True:
-                mode_str = "keyword" if keyword_mode and not self.force_command else "command"
-                logging.info("Listening for {0} from {1}...".format(mode_str, self.mic_device_name))
+        while True:
+            mode_str = "keyword" if keyword_mode and not self.force_command else "command"
+            logging.info("Listening for {0} from {1}...".format(mode_str, self.mic_device_name))
+            with sr.Microphone(self.mic_device) as source:
                 audio = self.recognizer.listen(source)
-                logging.info("Phrase captured.")
-                
-                try:
-                    phrases = []
-                    predictions = self.recognizer.recognize(audio, True)
-                    for prediction in predictions:
-                        phrases.append(prediction["text"])
-                    logging.info("Recognized phrases: " + str(phrases))
-                    if len(phrases) > 0:
-                        if keyword_mode and not self.force_command:        # looking for keyword
-                            for keyword in self.keywords:
-                                if keyword in phrases:
-                                    logging.info("'{0}' keyword found.".format(keyword))
-                                    keyword_mode = False
-                                    self.playSound("yes.wav")
-                                    break
-                        else:
-                            # check and execute the command
-                            command_ref = None
-                            for phrase in phrases:
-                                for match_key in self.matches.keys():
-                                    for reg_ex in self.matches[match_key]:
-                                        if reg_ex.search(phrase):   # match is found
-                                            command_ref = match_key
-                                            break
-                                    if command_ref:
+            logging.info("Phrase captured.")
+            
+            try:
+                phrases = []
+                predictions = self.recognizer.recognize(audio, True)
+                for prediction in predictions:
+                    phrases.append(prediction["text"])
+                logging.info("Recognized phrases: " + str(phrases))
+                if len(phrases) > 0:
+                    if keyword_mode and not self.force_command:        # looking for keyword
+                        for keyword in self.keywords:
+                            if keyword in phrases:
+                                logging.info("'{0}' keyword found.".format(keyword))
+                                keyword_mode = False
+                                self.playSound("yes.wav")
+                                break
+                    else:
+                        # check and execute the command
+                        command_ref = None
+                        for phrase in phrases:
+                            for match_key in self.matches.keys():
+                                for reg_ex in self.matches[match_key]:
+                                    if reg_ex.search(phrase):   # match is found
+                                        command_ref = match_key
                                         break
                                 if command_ref:
                                     break
-                                
-                            logging.info("Executing '{0}'".format(command_ref))
-                            command = self.commands[command_ref]
-                            if command:
-                                self.playSound("affirmative.wav")
-                                self.cmdProcessor.process_command(command)
-                        
-                            keyword_mode = True
-            
-                except LookupError:
-                    logging.info("No recognize words")
+                            if command_ref:
+                                break
+                            
+                        logging.info("Executing '{0}'".format(command_ref))
+                        command = self.commands[command_ref]
+                        if command:
+                            self.playSound("affirmative.wav")
+                            self.cmdProcessor.process_command(command)
+                    
+                        keyword_mode = True
+        
+            except LookupError:
+                logging.info("No recognize words")
 
-                except:
-                    e = sys.exc_info()[0]
-                    traceback.print_exc()
-                    keyword_mode = True
+            except:
+                e = sys.exc_info()[0]
+                traceback.print_exc()
+                keyword_mode = True
+
+            # pause for 1 sec
+            time.sleep(1)
 
 if __name__ == "__main__":
     import os
