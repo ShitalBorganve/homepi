@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# runs the specified python program to run in the background
+
+# get the directory where the script was run
+if [ -L $0 ] ; then
+    full_prog_name=$(readlink $0)
+else
+    full_prog_name=$0
+fi
+prog_dir=$(dirname $full_prog_name)
+
+# use python2
+PYTHON=/usr/bin/python2
+SCRIPT_FILE=$(basename $1)
+
+if [ -z "$SCRIPT_FILE" ]; then
+    echo "Nothing to run."
+    exit 1
+fi
+
+nohup $PYTHON $@ >/tmp/$SCRIPT_FILE.log 2>&1 &

@@ -8,7 +8,18 @@ HOMEPI_STT_PY=SpeechCommander.py
 HOMEPI_STT_LOG=SpeechCommander.log
 PULSEAUDIO=/usr/bin/pulseaudio
 PACMD=/usr/bin/pacmd
+PACTL=/usr/bin/pactl
 PYTHON=/usr/bin/python2
+
+# get the directory where the script was run
+if [ -L $0 ] ; then
+    full_prog_name=$(readlink $0)
+else
+    full_prog_name=$0
+fi
+prog_dir=$(dirname $full_prog_name)
+
+PYBGRUN="$prog_dir/pybgrun"
 
 do_kill() {
     pattern=$1
@@ -18,31 +29,43 @@ do_kill() {
     [ -z $pid ] || kill $pid >/dev/null 2>&1
 }
 
-BLUETOOTH_MAC=00:00:00:00:02:B8
 NAME=${NAME//\"/}
-if [ "$NAME" = "$BLUETOOTH_MAC" ]; then
+
+# check if device is in the list
+ACTIVATE=$(grep -m 1 "$NAME" $prog_dir/btheadset.list)
+
+if [ ! -z "$ACTIVATE" ]; then
     echo "Processing bluetooth device: |$ACTION|$NAME|" > /var/log/bluetooth_dev
     if [ $ACTION = "add" ]; then
         sleep 1
+
         # start pulseaudio
-        sudo -u $HOMEPI_USER $PULSEAUDIO --daemonize >> /var/log/bluetooth_dev
+        echo "Starting pulseaudio..." >>/var/log/bluetooth_dev
+        sudo  -u $HOMEPI_USER $PULSEAUDIO --daemonize >> /var/log/bluetooth_dev
+
+        # retrieve the device name
         bluez_mac=${NAME//:/_}
         bluez_dev=bluez_source.${bluez_mac}
         echo "$bluez_dev found." >> /var/log/bluetooth_dev
 
+        # delay for 1 sec to allow this device to be registered into pulseaudio
         sleep 1
-        sudo -u $HOMEPI_USER $PACMD set-sink-volume bluez_sink.${bluez_mac} 0
+
+        # mute the sink since i just used the headset for it's mic
+        # sudo -u $HOMEPI_USER $PACMD set-sink-volume bluez_sink.${bluez_mac} 0
+
+        # set this bluetooth device to be the default audio source
         sudo -u $HOMEPI_USER $PACMD set-default-source $bluez_dev >> /var/log/bluetooth_dev
 
         # start the voice commander
         sleep 2
-        nohup su - -c "$PYTHON $HOMEPI_STT_DIR/$HOMEPI_STT_PY" $HOMEPI_USER >/var/log/$HOMEPI_STT_LOG 2>&1 &
+        sudo -u $HOMEPI_USER $PYBGRUN $HOMEPI_STT_DIR/$HOMEPI_STT_PY
 
     elif [ $ACTION = "remove" ]; then
         # terminate the voice commander
         do_kill $HOMEPI_STT_PY
 
-        # unload pulseaudio
+        # terminate pulseaudio
         sudo -u $HOMEPI_USER $PACMD exit >> /var/log/bluetooth_dev
     fi
 fi
