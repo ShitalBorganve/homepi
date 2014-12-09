@@ -84,6 +84,7 @@ class SpeechCommander:
 
     def listen(self):
         keyword_mode = True
+        self.playSound("cmd-ready.wav")
         while True:
             mode_str = "keyword" if keyword_mode and not self.force_command else "command"
             logging.info("Listening for {0} from {1}...".format(mode_str, self.mic_device_name))
