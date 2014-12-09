@@ -18,7 +18,7 @@ _lirc_section = "lirc"
 
 class PiLircControl:
     
-    def __init__(self, configFile="HtRoomControl.conf"):
+    def __init__(self, configFile="conf/HtRoomControl.conf"):
         
         # read the configuration file
         self.config = ConfigParser.ConfigParser()

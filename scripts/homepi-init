@@ -23,7 +23,7 @@ HOMEPI_LIRC_PY=PiLircControl.py
 HOMEPI_WEB_LOG=/var/log/PiGpioWeb.log
 HOMEPI_LIRC_LOG=/var/log/PiLircControl.log
 
-LIRCD_CONFIG=$HOMEPI_LIRC_DIR/lircd.conf
+LIRCD_CONFIG=$HOMEPI_LIRC_DIR/conf/lircd.conf
 LIRCD_DEVICE=/dev/usbuirt
 LIRCD_DRIVER=usb_uirt_raw
 LIRCD_SOCKET=/var/run/lirc/lircd

@@ -26,7 +26,7 @@ def _isPinValid(pin):
 
 class PiGpioWeb(web.application):
     
-    def __init__(self, configFile='rpi_gpio_ws.conf'):
+    def __init__(self, configFile='conf/rpi_gpio_ws.conf'):
         ''' 
         initialize GPIO based on what's specified in the configuration file
         '''

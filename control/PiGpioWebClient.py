@@ -63,7 +63,7 @@ if __name__ == "__main__":
     numArgs = len(sys.argv)
     if ( numArgs >= 2 ):
         config = ConfigParser.ConfigParser()
-        config.read("HtRoomControl.conf")
+        config.read("conf/HtRoomControl.conf")
         controller = PiGpioWebClient(config)
         for argNo in range(1, numArgs):
             cmd = sys.argv[argNo]
