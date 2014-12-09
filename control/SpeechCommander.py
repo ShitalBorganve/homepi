@@ -130,6 +130,8 @@ class SpeechCommander:
         
             except LookupError:
                 logging.info("No recognize words")
+                if not keyword_mode or self.force_command:
+                    self.playSound("lookup-error.wav")
 
             except:
                 e = sys.exc_info()[0]
