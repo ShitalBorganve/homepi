@@ -8,9 +8,20 @@ import ConfigParser as configparser
 import speech_recognition as sr
 import pyaudio, wave
 import logging
-import re
+import re, subprocess
 import CommandProcessor
 import sys, traceback, time
+import GoogleTTS
+
+def shutil_which(pgm):
+    """
+    python2 backport of python3's shutil.which()
+    """
+    path = os.getenv('PATH')
+    for p in path.split(os.path.pathsep):
+        p = os.path.join(p, pgm)
+        if os.path.exists(p) and os.access(p, os.X_OK):
+            return p
 
 class SpeechCommander:
     
@@ -61,6 +72,11 @@ class SpeechCommander:
                 break
                 
         return result
+
+    def saySomething(self, something):
+        mp3_player = self.config.get("recognizer", "mp3_player").split()
+        process = subprocess.Popen(mp3_player, stdin=subprocess.PIPE)
+        process.communicate(something)
         
     def playSound(self, waveFile):
         chunk = 1024
@@ -84,7 +100,12 @@ class SpeechCommander:
 
     def listen(self):
         keyword_mode = True
-        self.playSound("cmd-ready.wav")
+        # retrieve from google possible responses
+        self.ready_response = GoogleTTS.audio_extract(self.config.get("recognizer", "ready_response"))
+        self.keyword_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "keyword_ack"))
+        self.command_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "command_ack"))
+        self.lookup_error_response = GoogleTTS.audio_extract(self.config.get("recognizer", "lookup_error_response"))
+        self.saySomething(self.ready_response)
         while True:
             mode_str = "keyword" if keyword_mode and not self.force_command else "command"
             logging.info("Listening for {0} from {1}...".format(mode_str, self.mic_device_name))
@@ -104,7 +125,7 @@ class SpeechCommander:
                             if keyword in phrases:
                                 logging.info("'{0}' keyword found.".format(keyword))
                                 keyword_mode = False
-                                self.playSound("yes.wav")
+                                self.saySomething(self.keyword_ack_response)
                                 break
                     else:
                         # check and execute the command
@@ -123,7 +144,7 @@ class SpeechCommander:
                         logging.info("Executing '{0}'".format(command_ref))
                         command = self.commands[command_ref]
                         if command:
-                            self.playSound("affirmative.wav")
+                            self.saySomething(self.command_ack_response)
                             self.cmdProcessor.process_command(command)
                     
                         keyword_mode = True
@@ -131,7 +152,7 @@ class SpeechCommander:
             except LookupError:
                 logging.info("No recognize words")
                 if not keyword_mode or self.force_command:
-                    self.playSound("lookup-error.wav")
+                    self.saySomething(self.lookup_error_response)
 
             except:
                 e = sys.exc_info()[0]
@@ -139,7 +160,7 @@ class SpeechCommander:
                 keyword_mode = True
 
             # pause for 1 sec
-            time.sleep(1)
+            time.sleep(0.5)
 
 if __name__ == "__main__":
     import os
