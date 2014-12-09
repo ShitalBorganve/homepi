@@ -129,6 +129,7 @@ class SpeechCommander:
                     audio = self.voiceQueue.popleft()
             except IndexError:
                 # no data to process in the queue
+                time.sleep(0.5) # delay for half a sec
                 continue
             
             logging.info("Processing in {0} mode...".format("keyword" if keyword_mode else "command"))
@@ -168,7 +169,10 @@ class SpeechCommander:
                                     break
                             if command_ref:
                                 break
-                            
+                        
+                        if command_ref is None:
+                            raise LookupError("No valid commands")
+    
                         logging.info("Executing '{0}'".format(command_ref))
                         command = self.commands[command_ref]
                         if command:
@@ -178,7 +182,7 @@ class SpeechCommander:
         
             except LookupError:
                 logging.info("No recognize words")
-                if not keyword_mode:
+                if not keyword_mode and not self.force_command:
                     self.playMp3(self.lookup_error_response)
 
             except:
