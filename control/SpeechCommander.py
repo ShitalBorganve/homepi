@@ -14,7 +14,7 @@ import sys, traceback, time
 
 class SpeechCommander:
     
-    def __init__(self, configFile="HtRoomControl.conf"):
+    def __init__(self, configFile="conf/HtRoomControl.conf"):
         self.config = configparser.ConfigParser()
         self.config.read(configFile)
         
