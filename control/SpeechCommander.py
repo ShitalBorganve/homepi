@@ -73,10 +73,14 @@ class SpeechCommander:
                 
         return result
 
-    def saySomething(self, something):
+    def playMp3(self, something):
         mp3_player = self.config.get("recognizer", "mp3_player").split()
         process = subprocess.Popen(mp3_player, stdin=subprocess.PIPE)
         process.communicate(something)
+
+    def saySomething(self, something):
+        self.playMp3(GoogleTTS.audio_extract(something))
+        
         
     def playSound(self, waveFile):
         chunk = 1024
@@ -105,7 +109,7 @@ class SpeechCommander:
         self.keyword_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "keyword_ack"))
         self.command_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "command_ack"))
         self.lookup_error_response = GoogleTTS.audio_extract(self.config.get("recognizer", "lookup_error_response"))
-        self.saySomething(self.ready_response)
+        self.playMp3(self.ready_response)
         while True:
             mode_str = "keyword" if keyword_mode and not self.force_command else "command"
             logging.info("Listening for {0} from {1}...".format(mode_str, self.mic_device_name))
@@ -119,13 +123,20 @@ class SpeechCommander:
                 for prediction in predictions:
                     phrases.append(prediction["text"])
                 logging.info("Recognized phrases: " + str(phrases))
+                
+                # special handling for thank you
+                if "thank you" in phrases:
+                    self.saySomething("You're welcome")
+                    keyword_mode = True
+                    continue
+                    
                 if len(phrases) > 0:
                     if keyword_mode and not self.force_command:        # looking for keyword
                         for keyword in self.keywords:
                             if keyword in phrases:
                                 logging.info("'{0}' keyword found.".format(keyword))
                                 keyword_mode = False
-                                self.saySomething(self.keyword_ack_response)
+                                self.playMp3(self.keyword_ack_response)
                                 break
                     else:
                         # check and execute the command
@@ -144,7 +155,7 @@ class SpeechCommander:
                         logging.info("Executing '{0}'".format(command_ref))
                         command = self.commands[command_ref]
                         if command:
-                            self.saySomething(self.command_ack_response)
+                            self.playMp3(self.command_ack_response)
                             self.cmdProcessor.process_command(command)
                     
                         keyword_mode = True
@@ -152,7 +163,7 @@ class SpeechCommander:
             except LookupError:
                 logging.info("No recognize words")
                 if not keyword_mode or self.force_command:
-                    self.saySomething(self.lookup_error_response)
+                    self.playMp3(self.lookup_error_response)
 
             except:
                 e = sys.exc_info()[0]
