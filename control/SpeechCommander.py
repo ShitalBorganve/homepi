@@ -12,6 +12,9 @@ import re, subprocess
 import CommandProcessor
 import sys, traceback, time
 import GoogleTTS
+import thread
+
+from collections import deque
 
 def shutil_which(pgm):
     """
@@ -102,36 +105,50 @@ class SpeechCommander:
         wf.close()
         stream.close()
 
-    def listen(self):
-        keyword_mode = True
-        # retrieve from google possible responses
-        self.ready_response = GoogleTTS.audio_extract(self.config.get("recognizer", "ready_response"))
-        self.keyword_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "keyword_ack"))
-        self.command_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "command_ack"))
-        self.lookup_error_response = GoogleTTS.audio_extract(self.config.get("recognizer", "lookup_error_response"))
-        self.playMp3(self.ready_response)
+    def captureVoice(self):
+        """ this is the thread which captures voice input from microphone """
+        
         while True:
-            mode_str = "keyword" if keyword_mode and not self.force_command else "command"
-            logging.info("Listening for {0} from {1}...".format(mode_str, self.mic_device_name))
+            logging.info("Waiting for voice command...")
+
             with sr.Microphone(self.mic_device) as source:
                 audio = self.recognizer.listen(source)
-            logging.info("Phrase captured.")
             
+            logging.info("A voice is detected.")
+
+            # put the captured audio into the queue
+            with self.thread_lock:
+                self.voiceQueue.append(audio)
+                
+    def processVoice(self):
+        """ process the captured voices """
+        keyword_mode = True and not self.force_command
+        while True:
             try:
-                phrases = []
+                with self.thread_lock:
+                    audio = self.voiceQueue.popleft()
+            except IndexError:
+                # no data to process in the queue
+                continue
+            
+            logging.info("Processing in {0} mode...".format("keyword" if keyword_mode else "command"))
+    
+            # process the retrieved audio
+            phrases = []
+            try:
                 predictions = self.recognizer.recognize(audio, True)
                 for prediction in predictions:
                     phrases.append(prediction["text"])
-                logging.info("Recognized phrases: " + str(phrases))
-                
+                logging.info("Recognized phrases: {0}".format(str(phrases)))
+
                 # special handling for thank you
                 if "thank you" in phrases:
                     self.saySomething("You're welcome")
-                    keyword_mode = True
+                    keyword_mode = True and not self.force_command
                     continue
-                    
+
                 if len(phrases) > 0:
-                    if keyword_mode and not self.force_command:        # looking for keyword
+                    if keyword_mode:        # looking for keyword
                         for keyword in self.keywords:
                             if keyword in phrases:
                                 logging.info("'{0}' keyword found.".format(keyword))
@@ -156,23 +173,38 @@ class SpeechCommander:
                         command = self.commands[command_ref]
                         if command:
                             self.playMp3(self.command_ack_response)
-                            self.cmdProcessor.process_command(command)
-                    
-                        keyword_mode = True
+                            self.cmdProcessor.process_command(command)                    
+                        keyword_mode = True and not self.force_command
         
             except LookupError:
                 logging.info("No recognize words")
-                if not keyword_mode or self.force_command:
+                if not keyword_mode:
                     self.playMp3(self.lookup_error_response)
 
             except:
                 e = sys.exc_info()[0]
                 traceback.print_exc()
-                keyword_mode = True
+                keyword_mode = True and not self.force_command
+                    
 
-            # pause for 1 sec
-            time.sleep(0.5)
+    def listen(self):
+        # retrieve from google possible responses
+        self.ready_response = GoogleTTS.audio_extract(self.config.get("recognizer", "ready_response"))
+        self.keyword_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "keyword_ack"))
+        self.command_ack_response = GoogleTTS.audio_extract(self.config.get("recognizer", "command_ack"))
+        self.lookup_error_response = GoogleTTS.audio_extract(self.config.get("recognizer", "lookup_error_response"))
+        self.playMp3(self.ready_response)
+        self.voiceQueue = deque()     # initialize to an empy queue
+        self.thread_lock = thread.allocate_lock()
+        
+        # starts the 2 threads
+        thread.start_new_thread(self.captureVoice, ())
+        thread.start_new_thread(self.processVoice, ())
 
+        # wait forever
+        while True:
+            time.sleep(1)
+        
 if __name__ == "__main__":
     import os
 
