@@ -176,8 +176,16 @@ class SpeechCommander:
                         logging.info("Executing '{0}'".format(command_ref))
                         command = self.commands[command_ref]
                         if command:
-                            self.playMp3(self.command_ack_response)
-                            self.cmdProcessor.process_command(command)                    
+                            full_cmd = command.split("|")
+                            if len(full_cmd) > 1:
+                                # there's a custom response
+                                if len(full_cmd[1]) > 0:
+                                    self.saySomething(full_cmd[1])
+                            else:
+                                self.playMp3(self.command_ack_response)
+
+                            self.cmdProcessor.process_command(full_cmd[0])                    
+                        
                         keyword_mode = True and not self.force_command
         
             except LookupError:
@@ -189,6 +197,7 @@ class SpeechCommander:
                 e = sys.exc_info()[0]
                 traceback.print_exc()
                 keyword_mode = True and not self.force_command
+                self.saySomething("There's an error. Please check the log.")
                     
 
     def listen(self):

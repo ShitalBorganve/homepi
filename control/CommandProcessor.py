@@ -6,6 +6,7 @@ import PiGpioWebClient
 import lircirsend
 import subprocess
 import ConfigParser
+import cmdutils
 
 class CommandProcessor:
     def __init__(self, config):
@@ -33,10 +34,20 @@ class CommandProcessor:
         elif cmd_list[0] == "python":   # execute a python script
             python_cmd = cmd_list[1].split(".")
             the_method = python_cmd[-1]
+            the_params = None
+            if len(cmd_list) > 2:
+                the_params = cmd_list[2:]   # retrieve the list of parameters
+
             the_module = ".".join(python_cmd[0:-1])
-            getattr(__import__(the_module), the_method)(self)
+            method_attr = getattr(__import__(the_module), the_method)
+            if the_params is None:
+                method_attr(self)
+            else:
+                method_attr(self, *the_params)
         elif cmd_list[0] == "gpio":     # control rpi gpio
             self.do_gpio_command(cmd_list[1])
+        elif cmd_list[0] == "say":
+            cmdutils.say_something(" ".join(cmd_list[1:]))
 
 if __name__ == "__main__":
     import os

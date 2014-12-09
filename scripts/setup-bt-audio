@@ -52,7 +52,7 @@ if [ ! -z "$ACTIVATE" ]; then
         sleep 1
 
         # mute the sink since i just used the headset for it's mic
-        sudo -u $HOMEPI_USER $PACMD set-sink-volume bluez_sink.${bluez_mac} 0
+        sudo -u $HOMEPI_USER $PACTL set-sink-volume bluez_sink.${bluez_mac} 50%
 
         # set this bluetooth device to be the default audio source
         sudo -u $HOMEPI_USER $PACMD set-default-source $bluez_dev >> /var/log/bluetooth_dev
