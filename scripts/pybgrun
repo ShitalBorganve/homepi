@@ -11,7 +11,7 @@ fi
 prog_dir=$(dirname $full_prog_name)
 
 # use python2
-PYTHON=/usr/bin/python2
+PYTHON="/usr/bin/python2"
 SCRIPT_FILE=$(basename $1)
 
 if [ -z "$SCRIPT_FILE" ]; then

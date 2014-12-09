@@ -34,7 +34,7 @@ class SpeechCommander:
             self.matches[match[0]] = []
             for re_str in re_list:
                 reg_ex = wildcard_str + wildcard_str.join(re_str.split()) + wildcard_str
-                self.matches[match[0]].append(re.compile(reg_ex))
+                self.matches[match[0]].append(re.compile(reg_ex, re.IGNORECASE))
         
         self.keywords = self.config.get("recognizer", "keywords").split("|")
 
