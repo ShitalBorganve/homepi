@@ -1,10 +1,35 @@
 '''
-This is for defining python functions which can be called from the lirc client like
+This is for defining python functions which can be called from the lirc client or Speech Commander like
 automating the movie watching
 '''
 
 import time
 from wakeonlan import wol
+
+import GoogleTTS    # text to spech
+import pywapi       # for retrieving weather reports
+import subprocess
+import logging
+
+def say_something(something):
+    """Use google tts to translate something to voice played by mpg123"""
+    mpg_player = "/usr/bin/mpg123"
+    audio_data = GoogleTTS.audio_extract(something)
+    process = subprocess.Popen([mpg_player, "--quiet", "-"], stdin=subprocess.PIPE)
+    process.communicate(audio_data)
+
+def say_weather(cmdProcessor):
+    """ retrieve weather info from yahoo and say the current condition """
+    location_code = cmdProcessor.config.get("misc", "weather_location_code")
+    logging.info("Getting weather from {0}".format(location_code))
+    result = pywapi.get_weather_from_yahoo(location_code, "metric")
+    strTemplate = "{location}. It's {condition} with temperature of {temperature} celsius"
+    whatToSay = strTemplate.format(
+        location=result['condition']['title'],
+        condition=result['condition']['text'],
+        temperature=result['condition']['temp']
+    )
+    say_something(whatToSay)
 
 def start_stop_movie(cmdProcessor):
     ''' cmdProcessor is an instance of CommandProcessor '''
