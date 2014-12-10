@@ -41,14 +41,11 @@ class SpeechCommander:
 
         # process the matches
         self.matches = { }
-        wildcard_str = "[\w\s]*"
+        wildcard_str = ".*"
         for match in self.config.items("matches"):
             # convert the matches to regular expressions
-            re_list = match[1].split("|")
-            self.matches[match[0]] = []
-            for re_str in re_list:
-                reg_ex = wildcard_str + wildcard_str.join(re_str.split()) + wildcard_str
-                self.matches[match[0]].append(re.compile(reg_ex, re.IGNORECASE))
+            reg_ex_str = ".*(" + match[1] + ").*"   # put outer group
+            self.matches[match[0]] = re.compile(reg_ex_str, re.IGNORECASE)
         
         self.keywords = self.config.get("recognizer", "keywords").split("|")
 
@@ -161,11 +158,11 @@ class SpeechCommander:
                         command_ref = None
                         for phrase in phrases:
                             for match_key in self.matches.keys():
-                                for reg_ex in self.matches[match_key]:
-                                    if reg_ex.search(phrase):   # match is found
-                                        command_ref = match_key
-                                        break
-                                if command_ref:
+                                reg_ex = self.matches[match_key]
+                                # current match can be used as parameter on the commands
+                                self.current_match = reg_ex.match(phrase)
+                                if self.current_match:
+                                    command_ref = match_key
                                     break
                             if command_ref:
                                 break
