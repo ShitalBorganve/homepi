@@ -185,7 +185,9 @@ class SpeechCommander:
                             # replace any parameterized command with values retrieved from reg ex
                             for param_number in range(len(self.match_groups)):
                                 param_str = "$" + str(param_number)
-                                full_cmd[0] = full_cmd[0].replace(param_str, self.match_groups[param_number])
+                                match_group = self.match_groups[param_number]
+                                if match_group:
+                                    full_cmd[0] = full_cmd[0].replace(param_str, match_group)
 
                             self.cmdProcessor.process_command(full_cmd[0])                 
                         

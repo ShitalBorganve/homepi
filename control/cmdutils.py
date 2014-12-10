@@ -6,7 +6,7 @@ automating the movie watching
 import time
 
 import subprocess, os
-import logging
+import logging, re
 
 def shutil_which(pgm):
     """
@@ -112,3 +112,32 @@ def start_stop_movie(cmdProcessor):
         
         # wake up media
         wol.send_magic_packet(xbmc_mac_address)
+
+TAG_RE = re.compile(r'<[^>]+>')
+
+def remove_tags(text):
+    return TAG_RE.sub('', text)
+
+def say_news(cmdProcessor):
+    """
+        Retrieve the news from the specified feed in the configuration file
+        feedparser package is required (sudo pip install feedparser)
+    """
+    import feedparser
+    
+    news_feed_url = cmdProcessor.config.get("misc", "news_feed_url")
+    if not news_feed_url:
+        logging.error("No newsfeed url specified.")
+        return
+
+    # retrieve news
+    logging.info("Retrieving news from {0}".format(news_feed_url))
+    feed = feedparser.parse(news_feed_url)
+    if len(feed.entries) > 0:
+        for entry in feed.entries:
+            summary = remove_tags(entry.summary).strip()
+            say_something(summary)
+            time.sleep(1.5)
+        
+        say_something("Done with the news")
+    else: say_something("No news to report")
