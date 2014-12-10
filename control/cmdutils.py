@@ -7,7 +7,7 @@ import time
 from wakeonlan import wol
 
 import GoogleTTS    # text to spech
-import pywapi       # for retrieving weather reports
+import pywapi       # for retrieving weather reports (sudo pip install pywapi)
 import subprocess
 import logging
 
@@ -19,7 +19,10 @@ def say_something(something):
     process.communicate(audio_data)
 
 def say_weather(cmdProcessor):
-    """ retrieve weather info from yahoo and say the current condition """
+    """ 
+        retrieve weather info from yahoo and say the current condition.
+        requires pywapi to be installed 
+    """
     location_code = cmdProcessor.config.get("misc", "weather_location_code")
     logging.info("Getting weather from {0}".format(location_code))
     result = pywapi.get_weather_from_yahoo(location_code, "metric")
@@ -51,6 +54,20 @@ def start_stop_movie(cmdProcessor):
 
         # turn off the receiver
         cmdProcessor.send_IR("onkyo", "KEY_POWER")
+
+        # turn off the media computer
+        xbmc_send = cmdProcessor.config.get("misc", "xbmc_send")
+        xbmc_host = cmdProcessor.config.get("misc", "xbmc_host")
+        xbmc_port = cmdProcessor.config.get("misc", "xbmc_port")
+        if xbmc_send and xbmc_host and xbmc_port:
+            subprocess.call(
+                [
+                    xbmc_send,
+                    "--host={0}".format(xbmc_host),
+                    "--port={0}".format(xbmc_port),
+                    "--action=XBMC.Powerdown"
+                ]
+            )
     else:
         # start movie watching
         xbmc_mac_address = cmdProcessor.config.get("misc", "xbmc_mac_address")
