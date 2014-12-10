@@ -4,16 +4,29 @@ automating the movie watching
 '''
 
 import time
-from wakeonlan import wol
 
-import GoogleTTS    # text to spech
-import pywapi       # for retrieving weather reports (sudo pip install pywapi)
-import subprocess
+import subprocess, os
 import logging
+
+def shutil_which(pgm):
+    """
+    python2 backport of python3's shutil.which()
+    """
+    path = os.getenv('PATH')
+    for p in path.split(os.path.pathsep):
+        p = os.path.join(p, pgm)
+        if os.path.exists(p) and os.access(p, os.X_OK):
+            return p
+
+mpg_player = shutil_which("mpg123")
 
 def say_something(something):
     """Use google tts to translate something to voice played by mpg123"""
-    mpg_player = "/usr/bin/mpg123"
+    if mpg_player is None:
+        logging.error("mpg123 is not installed.")
+        return
+
+    import GoogleTTS
     audio_data = GoogleTTS.audio_extract(something)
     process = subprocess.Popen([mpg_player, "--quiet", "-"], stdin=subprocess.PIPE)
     process.communicate(audio_data)
@@ -23,6 +36,7 @@ def say_weather(cmdProcessor):
         retrieve weather info from yahoo and say the current condition.
         requires pywapi to be installed 
     """
+    import pywapi   # must be installed (sudo pip install pywapi)
     location_code = cmdProcessor.config.get("misc", "weather_location_code")
     logging.info("Getting weather from {0}".format(location_code))
     result = pywapi.get_weather_from_yahoo(location_code, "metric")
@@ -34,8 +48,15 @@ def say_weather(cmdProcessor):
     )
     say_something(whatToSay)
 
+def say_command(cmdProcessor, *words):
+    words_to_say = " ".join(words)
+    say_something(words_to_say)
+
 def start_stop_movie(cmdProcessor):
     ''' cmdProcessor is an instance of CommandProcessor '''
+    # wakeonlan must be installed
+    from wakeonlan import wol
+
     # get screen status
     screen_status = cmdProcessor.do_gpio_command("screen-read")
     if int(screen_status) == 1:         # screen is down, let's wrap up movie watching 

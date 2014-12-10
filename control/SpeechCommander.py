@@ -160,8 +160,9 @@ class SpeechCommander:
                             for match_key in self.matches.keys():
                                 reg_ex = self.matches[match_key]
                                 # current match can be used as parameter on the commands
-                                self.current_match = reg_ex.match(phrase)
-                                if self.current_match:
+                                reg_ex_match = reg_ex.match(phrase)
+                                if reg_ex_match:
+                                    self.match_groups = reg_ex_match.groups()
                                     command_ref = match_key
                                     break
                             if command_ref:
@@ -180,8 +181,13 @@ class SpeechCommander:
                                     self.saySomething(full_cmd[1])
                             else:
                                 self.playMp3(self.command_ack_response)
+                            
+                            # replace any parameterized command with values retrieved from reg ex
+                            for param_number in range(len(self.match_groups)):
+                                param_str = "$" + str(param_number)
+                                full_cmd[0] = full_cmd[0].replace(param_str, self.match_groups[param_number])
 
-                            self.cmdProcessor.process_command(full_cmd[0])                    
+                            self.cmdProcessor.process_command(full_cmd[0])                 
                         
                         keyword_mode = True and not self.force_command
         
