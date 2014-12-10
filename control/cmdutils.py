@@ -130,14 +130,15 @@ def say_news(cmdProcessor):
         logging.error("No newsfeed url specified.")
         return
 
-    # retrieve news
     logging.info("Retrieving news from {0}".format(news_feed_url))
+
+    # retrieve news
     feed = feedparser.parse(news_feed_url)
     if len(feed.entries) > 0:
         for entry in feed.entries:
-            summary = remove_tags(entry.summary).strip()
+            summary = remove_tags(entry.title).strip()
             say_something(summary)
-            time.sleep(1.5)
-        
+            time.sleep(1)
         say_something("Done with the news")
-    else: say_something("No news to report")
+    else: 
+        say_something("No news to report")
