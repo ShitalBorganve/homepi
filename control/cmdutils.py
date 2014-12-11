@@ -41,11 +41,14 @@ def say_weather(cmdProcessor):
     location_code = cmdProcessor.config.get("misc", "weather_location_code")
     logging.info("Getting weather from {0}".format(location_code))
     result = pywapi.get_weather_from_yahoo(location_code, "metric")
-    strTemplate = "{location}. It's {condition} with temperature of {temperature} celsius"
+    strTemplate = "{location}. It's {condition} with temperature of {temperature} celsius. " \
+                  "Sunrise at {sunrise} and sunset at {sunset}"
     whatToSay = strTemplate.format(
         location=result['condition']['title'],
         condition=result['condition']['text'],
-        temperature=result['condition']['temp']
+        temperature=result['condition']['temp'],
+        sunrise=result['astronomy']['sunrise'],
+        sunset=result['astronomy']['sunset']
     )
     say_something(whatToSay)
 
