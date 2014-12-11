@@ -122,36 +122,45 @@ TAG_RE = re.compile(r'<[^>]+>')
 def remove_tags(text):
     return TAG_RE.sub('', text)
 
-def say_news(cmdProcessor):
-    """
-        Retrieve the news from the specified feed in the configuration file
-        feedparser package is required (sudo pip install feedparser)
-    """
+def _say_feed(feed_url, limit=10):
+
     import feedparser
-    
-    news_feed_url = cmdProcessor.config.get("misc", "news_feed_url")
-    if not news_feed_url:
-        logging.error("No newsfeed url specified.")
+
+    if not feed_url:
+        logging.error("No feed specified.")
         return
 
-    logging.info("Retrieving news from {0}".format(news_feed_url))
+    logging.info("Retrieve info from {0}".format(feed_url))
 
-    # retrieve news
     try:
-        feed = feedparser.parse(news_feed_url)
+        feed = feedparser.parse(feed_url)
         if len(feed.entries) > 0:
-            for entry in feed.entries:
+            for idx, entry in enumerate(feed.entries):
+                if idx > limit: break
+
                 if entry.has_key("title"):
-                    summary = entry["title"].strip()
+                    title = entry["title"].strip()
+                    # remove non-ascii characters (GoogleTTS does not like them)
+                    title = ''.join([ch if ord(ch) < 128 else '' for ch in title])
                     try:
-                        say_something(summary)
+                        say_something(title)
                     except:
-                        pass    # ignore error
-                time.sleep(1)
-            say_something("Done with the news")
+                        e = sys.exc_info()[0]
+                        logging.warning(traceback.format_exc())
+                        logging.warning(title)
+                
+                time.sleep(0.7)
+            say_something("Finish.")
         else: 
-            say_something("No news to report")
+            say_something("Nothing to report.")
     except:
         e = sys.exc_info()[0]
-        traceback.print_exc()
-        say_something("There was a problem retrieving the news. Please check log.")
+        logging.error(traceback.format_exc())
+        say_something("There was a problem retrievial of feed. Please check log.")
+
+def say_feed(cmdProcessor, feed_url, limit):
+    """
+        Generic handle for retrieving RSS feed
+    """
+
+    _say_feed(feed_url, int(limit))

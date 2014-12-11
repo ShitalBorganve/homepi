@@ -195,7 +195,7 @@ class SpeechCommander:
 
         except:
             e = sys.exc_info()[0]
-            traceback.print_exc()
+            logging.error(traceback.format_exc())
             keyword_mode = True and not self.force_command
             self.saySomething("There's an error. Please check the log.")
 
