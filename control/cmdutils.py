@@ -136,7 +136,7 @@ def _say_feed(feed_url, limit=10):
         feed = feedparser.parse(feed_url)
         if len(feed.entries) > 0:
             for idx, entry in enumerate(feed.entries):
-                if idx > limit: break
+                if idx >= limit: break
 
                 if entry.has_key("title"):
                     title = entry["title"].strip()
