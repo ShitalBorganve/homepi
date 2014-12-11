@@ -91,7 +91,7 @@ def audio_extract(input_text='',args=None):
     for idx, val in enumerate(combined_text):
         mp3url = "http://translate.google.com/translate_tts?tl=%s&q=%s&total=%s&idx=%s" % (
             args.language,
-            urllib.quote(val),
+            urllib.quote_plus(val),
             len(combined_text),
             idx)
         headers = {"Host": "translate.google.com",
