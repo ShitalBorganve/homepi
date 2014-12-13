@@ -1,0 +1,11 @@
+[Unit]
+Description=LIRC Infrared Signal Decoder
+After=network.target
+
+[Service]
+Restart=on-failure
+ExecStartPre=mkdir -p /var/run/lirc
+ExecStart=${LIRCD} -n -H ${LIRCD_DRIVER} -l -d ${LIRCD_DEVICE} -o /var/run/lirc/lircd ${HOMEPI_USER_HOME}/homepi/control/conf/lircd.conf
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Raspberry Pi GPIO web service
+After=network.target
+
+[Service]
+Restart=on-failure
+ExecStart=${PYTHON} ${HOMEPI_USER_HOME}/homepi/web/PiGpioWeb.py
+
+[Install]
+WantedBy=multi-user.target

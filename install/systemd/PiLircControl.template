@@ -1,0 +1,11 @@
+[Unit]
+Description=Pi Control client for LIRC
+After=PiGpioWeb.service,PiLircd.service
+Requires=PiGpioWeb.service,PiLircd.service
+
+[Service]
+Restart=on-failure
+ExecStart=${PYTHON} ${HOMEPI_USER_HOME}/homepi/control/PiLircControl.py
+
+[Install]
+WantedBy=multi-user.target
