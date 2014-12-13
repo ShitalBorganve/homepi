@@ -1,0 +1,68 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          PiLircd
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description:
+### END INIT INFO
+
+
+# for starting/stopping services for home automation
+
+# define environment variables
+PYTHON=$(which python2)
+HOMEPI_USER=${::HOMEPI_USER::}
+LIRCD=$(which lircd)
+LIRCD_DEVICE=${::LIRCD_DEVICE::}
+LIRCD_DRIVER=${::LIRCD_DRIVER::}
+LIRCD_OUTPUT_DIR=/var/run/lirc
+LIRCD_OUTPUT_FILE=$LIRCD_OUTPUT_DIR/lircd
+
+. /lib/lsb/init-functions
+
+do_kill() {
+    pattern=$1
+    output=`ps aux|grep $1`
+    set -- $output
+    pid=$2
+    [ -z $pid ] || kill $pid >/dev/null 2>&1
+}
+
+do_start() {
+    log_daemon_msg "Starting Pi Lircd"
+	mkdir -p $LIRCD_OUTPUT_DIR
+	$LIRCD -H $LIRCD_DRIVER -d $LIRCD_DEVICE -l -o $LIRCD_OUTPUT_FILE \
+		/home/$HOMEPI_USER/homepi/control/conf/lircd.conf
+    sleep 1
+
+    log_end_msg 0
+}
+
+do_stop() {
+    log_daemon_msg "Stopping Pi Lircd"
+
+    do_kill $LIRCD
+
+    log_end_msg 0
+}
+
+case "$1" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    restart|reload)
+        do_stop
+        sleep 1
+        do_start
+        ;;
+    *)
+        echo "Usage: $0 star|stop" >&2
+        exit 3
+        ;;
+esac

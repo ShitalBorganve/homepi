@@ -1,0 +1,66 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          PiGpioWeb
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description:
+### END INIT INFO
+
+
+# for starting/stopping services for home automation
+
+# define environment variables
+PYTHON=$(which python2)
+HOMEPI_USER=${::HOMEPI_USER::}
+HOMEPI_WEB_PY=PiGpioWeb.py
+HOMEPI_WEB_LOG=/var/log/PiGpioWeb.log
+HOMEPI_WEB_DIR=/home/$HOMEPI_USER/homepi/web
+
+. /lib/lsb/init-functions
+
+do_kill() {
+    pattern=$1
+    output=`ps aux|grep $1`
+    set -- $output
+    pid=$2
+    [ -z $pid ] || kill $pid >/dev/null 2>&1
+}
+
+do_start() {
+    log_daemon_msg "Starting PiGpioWeb"
+
+    # start the web service for controlling rpi gpio
+    nohup $PYTHON "$HOMEPI_WEB_DIR/$HOMEPI_WEB_PY" >$HOMEPI_WEB_LOG 2>&1 &
+    sleep 1
+
+    log_end_msg 0
+}
+
+do_stop() {
+    log_daemon_msg "Stopping PiGpioWeb"
+
+    do_kill $HOMEPI_WEB_PY
+
+    log_end_msg 0
+}
+
+case "$1" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    restart|reload)
+        do_stop
+        sleep 1
+        do_start
+        ;;
+    *)
+        echo "Usage: $0 star|stop" >&2
+        exit 3
+        ;;
+esac
