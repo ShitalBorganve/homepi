@@ -33,6 +33,7 @@ do_start() {
     log_daemon_msg "Starting PiLircControl"
 
     # start the web service for controlling rpi gpio
+	sleep 1
     nohup $PYTHON "$HOMEPI_LIRC_DIR/$HOMEPI_LIRC_PY" >$HOMEPI_LIRC_LOG 2>&1 &
     sleep 1
 

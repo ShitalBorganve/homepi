@@ -1,2 +1,2 @@
 SUBSYSTEM=="input", GROUP="input", MODE="0660" 
-KERNEL=="input[0-9]*", RUN+="/home/xbmc/homepi/scripts/setup-bt-audio"
+KERNEL=="input[0-9]*", RUN+="/home/pi/homepi/scripts/setup-bt-audio"

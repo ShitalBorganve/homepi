@@ -2,7 +2,7 @@
 
 # called from the udev rules
 
-HOMEPI_USER=pi
+HOMEPI_USER=${::HOMEPI_USER::}
 HOMEPI_STT_DIR=/home/$HOMEPI_USER/homepi/control
 HOMEPI_STT_PY=SpeechCommander.py
 HOMEPI_STT_LOG=SpeechCommander.log

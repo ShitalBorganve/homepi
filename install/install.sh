@@ -94,3 +94,56 @@ if [ $LIRCD_INSTALL = "Y" ]; then
 		$BASE_DIR/init.d/PiLircControl.template >$BASE_DIR/init.d/PiLircControl
 	install_init PiLircControl
 fi
+
+INSTALL_VOICE_CMD=$(prompt_yes_no "Do you want to install SpeechCommander? (Y/N)")
+if [ $INSTALL_VOICE_CMD = "Y" ]; then
+	# install the dependencies
+	echo "Installing dependencies"
+	sudo apt-get install python-pyaudio --yes
+	sudo $PIP install SpeechRecognition
+
+	echo "Installing bluetooth headset support"
+	sudo apt-get install bluetooth pulseaudio pulseaudio-module-bluetooth alsa-base alsa-utils  --yes
+	sudo usermod -a -G bluetooth,lp,pulse,pulse-access $HOMEPI_USER
+
+	CONFIG_FILE=/etc/bluetooth/audio.conf
+	TO_BE_ADDED="Enable=Source,Sink,Media,Socket"
+	if [ -z $(grep -m 1 "$TO_BE_ADDED" $CONFIG_FILE) ]; then
+		sudo sed -i '$ a\'"\n$TO_BE_ADDED" $CONFIG_FILE
+	fi
+
+	CONFIG_FILE=/etc/pulse/daemon.conf
+	TO_BE_ADDED="resample-method=trivial"
+	if [ -z $(grep -m 1 "$TO_BE_ADDED" $CONFIG_FILE) ]; then
+        sudo sed -i '$ a\'"\n$TO_BE_ADDED" $CONFIG_FILE
+    fi
+
+	CONFIG_FILE=/etc/pulse/system.pa
+	TO_BE_ADDED="load-module module-udev-detect tsched=0"
+	TO_BE_REPLACED="load-module module-udev-detect"
+	IS_MODIFIED=$(grep -m 1 "$TO_BE_ADDED" $CONFIG_FILE)
+	if [ -z "$IS_MODIFIED" ]; then
+        sudo sed -i 's|'"$TO_BE_REPLACED"'|'"$TO_BE_ADDED"'|' $CONFIG_FILE
+    fi
+
+	CONFIG_FILE=/etc/pulse/client.conf
+	TO_BE_ADDED="autospawn = no"
+	TO_BE_REPLACED="; autospawn = yes"
+	IS_MODIFIED=$(grep -m 1 "$TO_BE_ADDED" $CONFIG_FILE)
+    if [ -z "$IS_MODIFIED" ]; then
+        sudo sed -i 's|'"$TO_BE_REPLACED"'|'"$TO_BE_ADDED"'|' $CONFIG_FILE
+    fi
+
+	# setup BT input rules
+	sed 's|${::HOMEPI_USER::}|'$HOMEPI_USER'|g' \
+		$HOMEPI_USER_HOME/homepi/udev/rules.d/99-input.rules.template \
+		>$HOMEPI_USER_HOME/homepi/udev/rules.d/99-input.rules
+	sudo ln -sf $HOMEPI_USER_HOME/homepi/udev/rules.d/99-input.rules /etc/udev/rules.d/
+	sed 's|${::HOMEPI_USER::}|'$HOMEPI_USER'|g' $HOMEPI_USER_HOME/homepi/scripts/setup-bt-audio.template \
+		>$HOMEPI_USER_HOME/homepi/scripts/setup-bt-audio
+	chmod a+x $HOMEPI_USER_HOME/homepi/scripts/setup-bt-audio
+
+	sudo apt-get install flac mpg123 --yes
+fi
+
+echo "Please reboot to activate the services."
