@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/python2
 
 # thanks very much to hungtrung for this code
 # modify audio_extract to return mp3 data stream for

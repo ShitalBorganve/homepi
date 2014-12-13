@@ -1,0 +1,2 @@
+SUBSYSTEM=="tty", DRIVERS=="pl2303", SYMLINK+="arduino"
+SUBSYSTEM=="tty", DRIVERS=="ftdi_sio", SYMLINK+="usbuirt"
